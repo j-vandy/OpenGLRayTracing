@@ -2,17 +2,14 @@
 Ray tracing in OpenGL 4 with compute shaders
 
 # Installations
+How to setup OpenGL in Visual Studio
+https://www.youtube.com/watch?v=XpBGwZNyUh0
+
 Download Visual Studio Community 2022
 https://visualstudio.microsoft.com/downloads/?cid=learn-onpage-download-cta
 
 Download CMake Binary Distribution Installer (Windows x64 Installer)
 https://cmake.org/download
-
-Download GLFW Source Package
-https://www.glfw.org/download.html
-
-Generate Glad API gl Version 3.3 Profile Core zip
-https://glad.dav1d.de/
 
 # Resources
 Coding Adventure: Compute Shaders - Sebastian Lague (0:51-3:10)
