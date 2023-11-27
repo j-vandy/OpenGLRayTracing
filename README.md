@@ -18,5 +18,8 @@ https://www.youtube.com/watch?v=9RHGLZLUuwc
 Ray tracing with OpenGL Compute Shaders (Part I) - LWJGL
 https://github.com/LWJGL/lwjgl3-wiki/wiki/2.6.1.-Ray-tracing-with-OpenGL-Compute-Shaders-(Part-I)
 
+OpenGL Tutorials - Victor Gordan
+https://www.youtube.com/watch?v=XpBGwZNyUh0&list=PLPaoO-vpZnumdcb4tZc4x5Q-v7CkrQ6M-
+
 Modern OpenGL Tutorial - Compute Shaders - Victor Gordan
 https://www.youtube.com/watch?v=nF4X9BIUzx0
