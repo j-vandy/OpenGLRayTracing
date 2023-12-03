@@ -1,19 +1,21 @@
 #include <iostream>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <stb/stb_image.h>
 
 #include "EBO.h"
 #include "shaderClass.h"
 #include "VAO.h"
 #include "VBO.h"
+#include "Texture.h"
 
-// vertices of a square
+// vertices of a square (vertex pos, vertex color, vertex uv coords)
 GLfloat vertices[] =
 {
-	-0.5f, -0.5f, 0.0f,  // lower left corner
-	0.5f, -0.5f, 0.0f, // lower right corner
-	-0.5f, 0.5f, 0.0f, // upper left corner
-	0.5f, 0.5f, 0.0f // upper right corner
+	-0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  0.0f, 0.0f, // lower left corner, RED, (0,0)
+	0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,  1.0f, 0.0f, // lower right corner, GREEN, (1,0)
+	-0.5f, 0.5f, 0.0f,   0.0f, 0.0f, 1.0f,  0.0f, 1.0f, // upper left corner, BLUE, (0, 1)
+	0.5f, 0.5f, 0.0f,    1.0f, 1.0f, 0.0f,  1.0f, 1.0f  // upper right corner, YELLOW, (1, 1)
 };
 
 GLuint indices[] =
@@ -44,6 +46,7 @@ int main()
 		glfwTerminate();
 		return -1;
 	}
+
 	// set window as current context
 	glfwMakeContextCurrent(window);
 
@@ -52,7 +55,6 @@ int main()
 
 	// set viewport of OpenGL in the Window
 	glViewport(0, 0, window_width, window_height);
-
 
 	// generates Shader object using shaders default.vert and default.frag
 	Shader shaderProgram("default.vert", "default.frag");
@@ -68,10 +70,22 @@ int main()
 	EBO EBO1(indices, sizeof(indices));
 
 	// link VBO to VAO
-	VAO1.LinkVBO(VBO1, 0);
+	// aPos layout location = 0
+	VAO1.LinkAttrib(VBO1, 0, 3, GL_FLOAT, 8 * sizeof(float), (void*)0);
+	// aColor layout location = 1
+	VAO1.LinkAttrib(VBO1, 1, 3, GL_FLOAT, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+	// aTexCoord layout location = 2
+	VAO1.LinkAttrib(VBO1, 2, 2, GL_FLOAT, 8 * sizeof(float), (void*)(6 * sizeof(float)));
 	VAO1.Unbind();
 	VBO1.Unbind();
 	EBO1.Unbind();
+
+	// get id of 'scale' uniform variable in vertex shader
+	GLuint scaleUniID = glGetUniformLocation(shaderProgram.ID, "scale");
+
+	// create a texture
+	Texture texture("test.png", GL_TEXTURE_2D, GL_TEXTURE0, GL_NEAREST, GL_RGBA, GL_UNSIGNED_BYTE);
+	texture.LinkUni(shaderProgram, "sampler", 0);
 
 	// set clear color
 	glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
@@ -84,8 +98,15 @@ int main()
 
 		// tell OpenGL which shader program to use
 		shaderProgram.Use();
+
+		// set the uniform
+		glUniform1f(scaleUniID, 2.0f);
+
+		// bind Texture
+		texture.Bind();
 		// bind VAO 
 		VAO1.Bind();
+
 		// draw the triangles
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
@@ -100,10 +121,12 @@ int main()
 	VAO1.Delete();
 	VBO1.Delete();
 	EBO1.Delete();
+	texture.Delete();
 	shaderProgram.Delete();
 
 	// delete GLFW window & GLFW
 	glfwDestroyWindow(window);
 	glfwTerminate();
+
 	return 0;
 }

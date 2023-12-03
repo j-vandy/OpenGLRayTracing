@@ -7,12 +7,12 @@ VAO::VAO()
 }
 
 // links a VBO to the VAO using a given layout
-void VAO::LinkVBO(VBO VBO, GLuint layout)
+void VAO::LinkAttrib(VBO VBO, GLuint layout, GLuint numComponents, GLenum type, GLsizeiptr stride, void* offset)
 {
 	// binds the Vertex Buffer Object (VBO)
 	VBO.Bind();
 	// specifies the format of the VBO
-	glVertexAttribPointer(layout, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glVertexAttribPointer(layout, numComponents, type, GL_FALSE, stride, offset);
 	// enables the corresponding attribute to the VBO
 	glEnableVertexAttribArray(layout);
 	// unbinds the VBO
