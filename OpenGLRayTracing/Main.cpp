@@ -10,7 +10,7 @@
 #include "VBO.h"
 #include "Texture.h"
 
-// vertices of a square (vertex pos, vertex color, vertex uv coords)
+// vertices of a square (vertex pos, vertex uv coords)
 GLfloat vertices[] =
 {
 	-1.0f, -1.0f, 0.0f,  0.0f, 0.0f, // lower left corner,  (0,0)
@@ -33,34 +33,28 @@ const int WINDOW_HEIGHT = 800;
 const int TEXTURE_WIDTH = 256;
 const int TEXTURE_HEIGHT = 256;
 
+// scene information
+glm::vec4 backgroundColor(0.07f, 0.13f, 0.17f, 1.0f);
+glm::vec4 sphereColor(1.0f, 0.0f, 1.0f, 1.0f);
+float radius = 0.5f;
+
 void setTexturePixels(GLubyte* pixels)
 {
 	for (int i = 0; i < TEXTURE_WIDTH; i++)
 	{
 		for (int j = 0; j < TEXTURE_HEIGHT; j++)
 		{
-			// (bx^2 + by^2 + bz^2)t^2 + (2(axbx + ayby + azbz))t + (ax^2 + ay^2 + az^2 - r^2) = 0
-			// a = ray origin
-			// b = ray direction
-			// r = sphere radius
-			// t = hit distance
 			glm::vec4 color;
-			glm::vec4 backgroundColor(0.07f, 0.13f, 0.17f, 1.0f);
-			glm::vec4 sphereColor(1.0f, 0.0f, 1.0f, 1.0f);
 
-			// calculations came from:
-			// https://www.youtube.com/watch?v=v9vndyfk2U8&list=PLlrATfBNZ98edc5GshdBtREv5asFW3yXl&index=3
-
-			float radius = 0.5f;
-
-			// convert i,j (our x and y coords) to range -1->1
-			int x = i / 256 - 1;
-			int y = j / 256 - 1;
+			// Convert i,j (our x and y coords) to range -1 -> 1
+			float x = ((float)i / (TEXTURE_WIDTH / 2)) - 1;
+			float y = ((float)j / (TEXTURE_HEIGHT / 2)) - 1;
 
 			glm::vec3 rayOrigin(0.0f, 0.0f, 2.0f);
 			glm::vec3 rayDirection(x, y, -1.0f);
+			rayDirection = glm::normalize(rayDirection);
 
-			// terms for quadratic formula
+			// Terms for quadratic formula
 			float a = glm::dot(rayDirection, rayDirection);
 			float b = 2.0f * glm::dot(rayOrigin, rayDirection);
 			float c = glm::dot(rayOrigin, rayOrigin) - radius * radius;
@@ -77,17 +71,12 @@ void setTexturePixels(GLubyte* pixels)
 				color = backgroundColor;
 			}
 
-			// each pixel has rgba values
+			// Each pixel has RGBA values
 			int index = (i * TEXTURE_WIDTH + j) * 4;
-			pixels[index] = 255; // red channel
-			pixels[index + 1] = 0; // green channel
-			pixels[index + 2] = 255; // blue channel
-			pixels[index + 3] = 255; // alpha channel
-			 
-			pixels[index] = color.r;
-			pixels[index + 1] = color.g;
-			pixels[index + 2] = color.b;
-			pixels[index + 3] = color.a;
+			pixels[index] = static_cast<GLubyte>(color.r * 255.0f);
+			pixels[index + 1] = static_cast<GLubyte>(color.g * 255.0f);
+			pixels[index + 2] = static_cast<GLubyte>(color.b * 255.0f);
+			pixels[index + 3] = static_cast<GLubyte>(color.a * 255.0f);
 		}
 	}
 }
@@ -122,6 +111,7 @@ int main()
 	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
 
+
 	// generates Shader object using shaders default.vert and default.frag
 	Shader shaderProgram("default.vert", "default.frag");
 
@@ -149,8 +139,10 @@ int main()
 	setTexturePixels(pixels);
 
 	// create a texture
-	Texture texture(pixels, TEXTURE_WIDTH, TEXTURE_HEIGHT, GL_TEXTURE_2D, GL_TEXTURE0, GL_NEAREST, GL_RGBA, GL_UNSIGNED_BYTE);
+	Texture texture(pixels, TEXTURE_WIDTH, TEXTURE_HEIGHT, GL_TEXTURE_2D, GL_TEXTURE0, GL_LINEAR, GL_RGBA, GL_UNSIGNED_BYTE);
 	texture.LinkUni(shaderProgram, "sampler", 0);
+
+
 
 	// set clear color
 	glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
@@ -179,6 +171,8 @@ int main()
 		// takes care of GLFW events
 		glfwPollEvents();
 	}
+
+
 
 	// delete all objects we have created
 	VAO1.Delete();
