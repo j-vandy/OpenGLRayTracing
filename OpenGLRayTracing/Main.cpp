@@ -30,13 +30,14 @@ const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 800;
 
 // texture dimensions
-const int TEXTURE_WIDTH = 256;
-const int TEXTURE_HEIGHT = 256;
+const int TEXTURE_WIDTH = 1024;
+const int TEXTURE_HEIGHT = 1024;
 
 // scene information
-glm::vec4 backgroundColor(0.07f, 0.13f, 0.17f, 1.0f);
-glm::vec4 sphereColor(1.0f, 0.0f, 1.0f, 1.0f);
-float radius = 0.5f;
+const glm::vec4 backgroundColor(0.07f, 0.13f, 0.17f, 1.0f);
+const glm::vec4 sphereColor(1.0f, 0.0f, 1.0f, 1.0f);
+const glm::vec3 lightDir(-1.0f, -1.0f, -1.0f);
+const float radius = 0.5f;
 
 void setTexturePixels(GLubyte* pixels)
 {
@@ -50,7 +51,7 @@ void setTexturePixels(GLubyte* pixels)
 			float x = ((float)i / (TEXTURE_WIDTH / 2)) - 1;
 			float y = ((float)j / (TEXTURE_HEIGHT / 2)) - 1;
 
-			glm::vec3 rayOrigin(0.0f, 0.0f, 2.0f);
+			glm::vec3 rayOrigin(0.0f, 0.0f, 1.0f);
 			glm::vec3 rayDirection(x, y, -1.0f);
 			rayDirection = glm::normalize(rayDirection);
 
@@ -64,7 +65,19 @@ void setTexturePixels(GLubyte* pixels)
 
 			if (discriminant > 0.0f)
 			{
-				color = sphereColor;
+				// (-b +- sqrt(discriminant)) / 2a
+				float farthestT = (-b + glm::sqrt(discriminant)) / (2.0f * a);
+				float closestT = (-b - glm::sqrt(discriminant)) / (2.0f * a);
+
+				glm::vec3 hitPoint = rayOrigin + rayDirection * closestT;
+				// hitPoint - sphere origin (0,0,0)
+				glm::vec3 normal = glm::normalize(hitPoint);
+
+				glm::vec3 light = glm::normalize(lightDir);
+				
+				float d = glm::max(glm::dot(normal, -light), 0.0f);
+
+				color = sphereColor * d;
 			}
 			else
 			{
