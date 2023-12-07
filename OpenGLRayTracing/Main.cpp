@@ -2,6 +2,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb/stb_image.h>
+#include <glm/glm.hpp>
 
 #include "EBO.h"
 #include "shaderClass.h"
@@ -38,12 +39,52 @@ void setTexturePixels(GLubyte* pixels)
 	{
 		for (int j = 0; j < TEXTURE_HEIGHT; j++)
 		{
-			// each pixel has rgba values
+			glm::vec4 color;
+			glm::vec4 backgroundColor(0.07f, 0.13f, 0.17f, 1.0f);
+			glm::vec4 sphereColor(1.0f, 0.0f, 1.0f, 1.0f);
+			float radius = 0.5f;
+
+			// Convert i,j (our x and y coords) to range -1 -> 1
+			float x = ((float)i / (TEXTURE_WIDTH / 2)) - 1;
+			float y = ((float)j / (TEXTURE_HEIGHT / 2)) - 1;
+
+			glm::vec3 rayOrigin(0.0f, 0.0f, 2.0f);
+			glm::vec3 rayDirection(x, y, -1.0f);
+			rayDirection = glm::normalize(rayDirection); 
+
+			// Terms for quadratic formula
+			float a = glm::dot(rayDirection, rayDirection);
+			float b = 2.0f * glm::dot(rayOrigin, rayDirection);
+			float c = glm::dot(rayOrigin, rayOrigin) - radius * radius;
+
+			// b^2 - 4ac (quadratic formula discriminant)
+			float discriminant = b * b - 4.0f * a * c;
+
+			if (discriminant > 0.0f)
+			{
+				color = sphereColor;
+			}
+			else
+			{
+				color = backgroundColor;
+			}
+
+			// Each pixel has RGBA values
 			int index = (i * TEXTURE_WIDTH + j) * 4;
-			pixels[index] = 255; // red channel
-			pixels[index + 1] = 0; // green channel
-			pixels[index + 2] = 255; // blue channel
-			pixels[index + 3] = 255; // alpha channel
+			//pixels[index] = 255; // red channel
+			//pixels[index + 1] = 0; // green channel
+			//pixels[index + 2] = 255; // blue channel
+			//pixels[index + 3] = 255; // alpha channel
+
+			pixels[index] = static_cast<GLubyte>(color.r * 255); 
+			pixels[index + 1] = static_cast<GLubyte>(color.g * 255); 
+			pixels[index + 2] = static_cast<GLubyte>(color.b * 255); 
+			pixels[index + 3] = static_cast<GLubyte>(color.a * 255); 
+
+			//pixels[index] = color.r;
+			//pixels[index + 1] = color.g;
+			//pixels[index + 2] = color.b;
+			//pixels[index + 3] = color.a;
 		}
 	}
 }
