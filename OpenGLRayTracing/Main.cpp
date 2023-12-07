@@ -12,10 +12,10 @@
 // vertices of a square (vertex pos, vertex color, vertex uv coords)
 GLfloat vertices[] =
 {
-	-0.5f, -0.5f, 0.0f,  0.0f, 0.0f, // lower left corner,  (0,0)
-	0.5f, -0.5f, 0.0f,   1.0f, 0.0f, // lower right corner, (1,0)
-	-0.5f, 0.5f, 0.0f,   0.0f, 1.0f, // upper left corner,  (0, 1)
-	0.5f, 0.5f, 0.0f,    1.0f, 1.0f  // upper right corner, (1, 1)
+	-1.0f, -1.0f, 0.0f,  0.0f, 0.0f, // lower left corner,  (0,0)
+	1.0f, -1.0f, 0.0f,   1.0f, 0.0f, // lower right corner, (1,0)
+	-1.0f, 1.0f, 0.0f,   0.0f, 1.0f, // upper left corner,  (0, 1)
+	1.0f, 1.0f, 0.0f,    1.0f, 1.0f  // upper right corner, (1, 1)
 };
 
 GLuint indices[] =
@@ -77,6 +77,7 @@ int main()
 	// set viewport of OpenGL in the Window
 	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
+
 	// generates Shader object using shaders default.vert and default.frag
 	Shader shaderProgram("default.vert", "default.frag");
 
@@ -99,9 +100,6 @@ int main()
 	VBO1.Unbind();
 	EBO1.Unbind();
 
-	// get id of 'scale' uniform variable in vertex shader
-	GLuint scaleUniID = glGetUniformLocation(shaderProgram.ID, "scale");
-
 	// generate pixel data
 	GLubyte* pixels = new GLubyte[TEXTURE_WIDTH * TEXTURE_HEIGHT * 4];
 	setTexturePixels(pixels);
@@ -122,16 +120,13 @@ int main()
 		// tell OpenGL which shader program to use
 		shaderProgram.Use();
 
-		// set the uniform
-		glUniform1f(scaleUniID, 1.5f);
-
 		// bind Texture
 		texture.Bind();
 
 		// bind VAO 
 		VAO1.Bind();
 
-		// draw the triangles
+		// draw the quad
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 		// swap back buffer with the front buffer
