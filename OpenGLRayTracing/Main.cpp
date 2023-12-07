@@ -2,6 +2,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb/stb_image.h>
+#include <glm/glm.hpp>
 
 #include "EBO.h"
 #include "shaderClass.h"
@@ -38,12 +39,55 @@ void setTexturePixels(GLubyte* pixels)
 	{
 		for (int j = 0; j < TEXTURE_HEIGHT; j++)
 		{
+			// (bx^2 + by^2 + bz^2)t^2 + (2(axbx + ayby + azbz))t + (ax^2 + ay^2 + az^2 - r^2) = 0
+			// a = ray origin
+			// b = ray direction
+			// r = sphere radius
+			// t = hit distance
+			glm::vec4 color;
+			glm::vec4 backgroundColor(0.07f, 0.13f, 0.17f, 1.0f);
+			glm::vec4 sphereColor(1.0f, 0.0f, 1.0f, 1.0f);
+
+			// calculations came from:
+			// https://www.youtube.com/watch?v=v9vndyfk2U8&list=PLlrATfBNZ98edc5GshdBtREv5asFW3yXl&index=3
+
+			float radius = 0.5f;
+
+			// convert i,j (our x and y coords) to range -1->1
+			int x = i / 256 - 1;
+			int y = j / 256 - 1;
+
+			glm::vec3 rayOrigin(0.0f, 0.0f, 2.0f);
+			glm::vec3 rayDirection(x, y, -1.0f);
+
+			// terms for quadratic formula
+			float a = glm::dot(rayDirection, rayDirection);
+			float b = 2.0f * glm::dot(rayOrigin, rayDirection);
+			float c = glm::dot(rayOrigin, rayOrigin) - radius * radius;
+
+			// b^2 - 4ac (quadratic formula discriminant)
+			float discriminant = b * b - 4.0f * a * c;
+
+			if (discriminant > 0.0f)
+			{
+				color = sphereColor;
+			}
+			else
+			{
+				color = backgroundColor;
+			}
+
 			// each pixel has rgba values
 			int index = (i * TEXTURE_WIDTH + j) * 4;
 			pixels[index] = 255; // red channel
 			pixels[index + 1] = 0; // green channel
 			pixels[index + 2] = 255; // blue channel
 			pixels[index + 3] = 255; // alpha channel
+			 
+			pixels[index] = color.r;
+			pixels[index + 1] = color.g;
+			pixels[index + 2] = color.b;
+			pixels[index + 3] = color.a;
 		}
 	}
 }
