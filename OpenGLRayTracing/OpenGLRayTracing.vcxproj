@@ -71,12 +71,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>C:\Users\jacks\OneDrive\Desktop\OpenGLRayTracing\OpenGLRayTracing\Libraries\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\jacks\OneDrive\Desktop\OpenGLRayTracing\OpenGLRayTracing\Libraries\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\caydn\Videos\OpenGLRayTracing\OpenGLRayTracing\Libraries\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\caydn\Videos\OpenGLRayTracing\OpenGLRayTracing\Libraries\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\Users\jacks\OneDrive\Desktop\OpenGLRayTracing\OpenGLRayTracing\Libraries\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\jacks\OneDrive\Desktop\OpenGLRayTracing\OpenGLRayTracing\Libraries\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\caydn\Videos\OpenGLRayTracing\OpenGLRayTracing\Libraries\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\caydn\Videos\OpenGLRayTracing\OpenGLRayTracing\Libraries\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>C:\Users\jacks\OneDrive\Desktop\OpenGLRayTracing\OpenGLRayTracing\Libraries\include;$(IncludePath)</IncludePath>
