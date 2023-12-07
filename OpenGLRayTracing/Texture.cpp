@@ -35,6 +35,36 @@ Texture::Texture(const char* image, GLenum texType, GLenum textureUnit, GLenum s
 	glBindTexture(texType, 0);
 }
 
+Texture::Texture(GLubyte* pixels, int texture_width, int texture_height, GLenum texType, GLenum textureUnit, GLenum sampleType, GLenum format, GLenum pixelType)
+{
+	type = texType;
+
+	// create OpenGL texture with ID
+	glGenTextures(1, &ID);
+
+	// set active texture unit
+	glActiveTexture(textureUnit);
+	// bind the texture object ID reference to that texture unit
+	glBindTexture(texType, ID);
+
+	// set texture sampling
+	glTexParameteri(texType, GL_TEXTURE_MIN_FILTER, sampleType);
+	glTexParameteri(texType, GL_TEXTURE_MAG_FILTER, sampleType);
+
+	// set texture repetition to GL_REPEAT (uv coords are called st coords in OpenGL)
+	glTexParameteri(texType, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(texType, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	
+	// link texture data to bound texture object reference
+	glTexImage2D(texType, 0, GL_RGBA, texture_width, texture_height, 0, format, pixelType, pixels);
+	// generate mip maps
+	glGenerateMipmap(texType);
+
+	// free bytes and unbind texture
+	delete[] pixels;
+	glBindTexture(texType, 0);
+}
+
 void Texture::LinkUni(Shader shader, const char* uniform, GLuint unit)
 {
 	// get sampler2D uniform variable ID

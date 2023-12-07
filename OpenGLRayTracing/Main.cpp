@@ -48,17 +48,6 @@ void setTexturePixels(GLubyte* pixels)
 	}
 }
 
-void printArr(GLubyte* pixels)
-{
-	for (int i = 0; i < TEXTURE_WIDTH * TEXTURE_HEIGHT * 4; i++)
-	{
-		if (i % 4 == 0)
-			std::cout <<std::endl;
-
-		std::cout << pixels[i];
-	}
-}
-
 int main()
 {
 	glfwInit();
@@ -113,45 +102,13 @@ int main()
 	// get id of 'scale' uniform variable in vertex shader
 	GLuint scaleUniID = glGetUniformLocation(shaderProgram.ID, "scale");
 
+	// generate pixel data
+	GLubyte* pixels = new GLubyte[TEXTURE_WIDTH * TEXTURE_HEIGHT * 4];
+	setTexturePixels(pixels);
+
 	// create a texture
-	//Texture texture("test.png", GL_TEXTURE_2D, GL_TEXTURE0, GL_NEAREST, GL_RGBA, GL_UNSIGNED_BYTE);
-	//texture.LinkUni(shaderProgram, "sampler", 0);
-	
-	// create a texture ID
-	GLuint textureID;
-	glGenTextures(1, &textureID);
-	
-	// bind ID to current texture
-	glBindTexture(GL_TEXTURE_2D, textureID);
-
-	// allocate memory for the pixel array (each pixel contains rgba)
-	unsigned char* pixels = new unsigned char[TEXTURE_WIDTH * TEXTURE_HEIGHT * 4];
-	//setTexturePixels(pixels);
-	for (int i = 0; i < TEXTURE_WIDTH * TEXTURE_HEIGHT * 4; i++)
-	{
-		pixels[i] = 255;
-	}
-	printArr(pixels);
-
-	// link texture data to bound texture object reference
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, TEXTURE_WIDTH, TEXTURE_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-
-	// set texture sampling
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	// get sampler2D uniform variable ID
-	GLuint samplerUniID = glGetUniformLocation(shaderProgram.ID, "sampler");
-	shaderProgram.Use();
-
-	// set sampler uniform variable to texture unit
-	glUniform1i(samplerUniID, textureID);
-
-	// generate mipmaps
-	glGenerateMipmap(GL_TEXTURE_2D);
-
-	// unbind texture
-	glBindTexture(GL_TEXTURE_2D, 0);
+	Texture texture(pixels, TEXTURE_WIDTH, TEXTURE_HEIGHT, GL_TEXTURE_2D, GL_TEXTURE0, GL_NEAREST, GL_RGBA, GL_UNSIGNED_BYTE);
+	texture.LinkUni(shaderProgram, "sampler", 0);
 
 	// set clear color
 	glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
@@ -169,8 +126,7 @@ int main()
 		glUniform1f(scaleUniID, 1.5f);
 
 		// bind Texture
-		//texture.Bind();
-		glBindTexture(GL_TEXTURE_2D, textureID);
+		texture.Bind();
 
 		// bind VAO 
 		VAO1.Bind();
@@ -189,9 +145,7 @@ int main()
 	VAO1.Delete();
 	VBO1.Delete();
 	EBO1.Delete();
-	//texture.Delete();
-	delete[] pixels;
-	glDeleteTextures(1, &textureID);
+	texture.Delete();
 	shaderProgram.Delete();
 
 	// delete GLFW window & GLFW
