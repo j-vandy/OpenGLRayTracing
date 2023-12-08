@@ -3,6 +3,7 @@
 #include <GLFW/glfw3.h>
 #include <stb/stb_image.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/random.hpp>
 
 #include "EBO.h"
 #include "shaderClass.h"
@@ -11,6 +12,7 @@
 #include "Texture.h"
 #include "Ray.h"
 #include "BasicCamera.h"
+#include "Scene.h"
 
 // vertices of a square (vertex pos, vertex uv coords)
 GLfloat vertices[] =
@@ -32,42 +34,133 @@ int window_width = 800;
 int window_height = 800;
 
 // scene information
-const glm::vec4 backgroundColor(0.07f, 0.13f, 0.17f, 1.0f);
-const glm::vec4 sphereColor(1.0f, 0.0f, 1.0f, 1.0f);
-const glm::vec3 lightDir(-1.0f, -1.0f, -1.0f);
-const float radius = 0.5f;
-BasicCamera camera(45.0f, 0.01f, 100.0f, window_width, window_height);
+const glm::vec4 CLEAR_COLOR(0.07f, 0.13f, 0.17f, 1.0f);
+//const glm::vec3 SKY_COLOR(0.07f, 0.13f, 0.17f);
+const glm::vec3 SKY_COLOR(0.6f, 0.7f, 0.9f);
+const glm::vec3 LIGHT_DIR(-1.0f, -1.0f, -1.0f);
 
-// returns color for given ray
-glm::vec4 TraceRay(const Ray& ray)
+struct HitPayload
 {
-	// Terms for quadratic formula
-	float a = glm::dot(ray.Direction, ray.Direction);
-	float b = 2.0f * glm::dot(ray.Origin, ray.Direction);
-	float c = glm::dot(ray.Origin, ray.Origin) - radius * radius;
+	float HitDistance;
+	glm::vec3 WorldPosition;
+	glm::vec3 WorldNormal;
+	int ObjectIndex;
+};
 
-	// b^2 - 4ac (quadratic formula discriminant)
-	float discriminant = b * b - 4.0f * a * c;
-
-	if (discriminant <= 0.0f)
-		return backgroundColor;
-
-	// (-b +- sqrt(discriminant)) / 2a
-	float farthestT = (-b + glm::sqrt(discriminant)) / (2.0f * a);
-	float closestT = (-b - glm::sqrt(discriminant)) / (2.0f * a);
-
-	glm::vec3 hitPoint = ray.Origin + ray.Direction * closestT;
-	// hitPoint - sphere origin (0,0,0)
-	glm::vec3 normal = glm::normalize(hitPoint);
-
-	glm::vec3 light = glm::normalize(lightDir);
-
-	float d = glm::max(glm::dot(normal, -light), 0.0f);
-
-	return sphereColor * d;
+HitPayload Miss(const Ray& ray)
+{
+	HitPayload payload;
+	payload.ObjectIndex = -1;
+	return payload;
 }
 
-void setTexturePixels(GLubyte* pixels)
+HitPayload ClosestHit(const Scene& scene, const Ray& ray, float hitDist, int objectIndex)
+{
+	HitPayload payload;
+	payload.HitDistance = hitDist;
+	payload.ObjectIndex = objectIndex;
+
+	const Sphere& closestSphere = scene.Spheres[objectIndex];
+
+	glm::vec3 origin = ray.Origin - closestSphere.Position; //this still translates vertical :D
+
+	payload.WorldPosition = origin + ray.Direction * hitDist;
+	payload.WorldNormal= glm::normalize(payload.WorldPosition);
+
+	payload.WorldPosition += closestSphere.Position;
+
+	return payload;
+}
+
+// returns color for given ray
+HitPayload TraceRay(const Scene& scene, const Ray& ray)
+{
+	// empty scene
+	int closestSphere = -1;
+	float hitDist = FLT_MAX;
+
+	for (int i = 0; i < scene.Spheres.size(); i++)
+	{
+		const Sphere& sphere = scene.Spheres[i];
+
+		glm::vec3 origin = ray.Origin - sphere.Position; //this still translate vertical
+		
+		// Terms for quadratic formula
+		float a = glm::dot(ray.Direction, ray.Direction);
+		float b = 2.0f * glm::dot(origin, ray.Direction);
+		float c = glm::dot(origin, origin) - sphere.Radius * sphere.Radius;
+
+		// b^2 - 4ac (quadratic formula discriminant)
+		float discriminant = b * b - 4.0f * a * c;
+
+		if (discriminant <= 0.0f)
+			continue;
+
+		// (-b +- sqrt(discriminant)) / 2a
+		//float otherT = (-b + glm::sqrt(discriminant)) / (2.0f * a);
+		float closestT = (-b - glm::sqrt(discriminant)) / (2.0f * a);
+		if (closestT > 0 && closestT < hitDist)
+		{
+			closestSphere = i;
+			hitDist = closestT;
+		}
+	}
+
+	if (closestSphere < 0)
+		return Miss(ray);
+
+	return ClosestHit(scene, ray, hitDist, closestSphere);
+}
+
+glm::vec4 PerPixel(const Scene& scene, BasicCamera& camera, float x, float y)
+{
+	Ray ray;
+	// ray origin is the cameras position
+	ray.Origin = camera.position;
+	ray.Direction = camera.GetRayDirection(x, y); // this is extremely costly
+
+	glm::vec3 color(0.0f);
+
+	float multiplier = 1.0f;
+	int bounces = 3;
+	for (int i = 0; i < bounces; i++)
+	{
+		HitPayload payload = TraceRay(scene, ray);
+		if (payload.ObjectIndex < 0)
+		{
+			color += SKY_COLOR * multiplier;
+			break;
+		}
+
+		glm::vec3 light = glm::normalize(LIGHT_DIR);
+		float lightIntensity = glm::max(glm::dot(payload.WorldNormal, -light), 0.0f);
+
+		const Sphere& closestSphere = scene.Spheres[payload.ObjectIndex];
+
+		Material mat = scene.Materials[closestSphere.MaterialIndex];
+		glm::vec3 sphereColor = mat.Albedo;
+		sphereColor *= lightIntensity;
+		
+		color += sphereColor * multiplier;
+
+
+		multiplier *= 0.35f;
+
+		ray.Origin = payload.WorldPosition + payload.WorldNormal * 0.001f;
+		glm::vec3 rand = glm::linearRand(glm::vec3(-0.5f), glm::vec3(0.5f));
+		ray.Direction = glm::reflect(ray.Direction, payload.WorldNormal + rand * mat.Roughness);
+	}
+
+	color = glm::vec3(
+		glm::clamp(color.x, 0.0f, 1.0f),
+		glm::clamp(color.y, 0.0f, 1.0f),
+		glm::clamp(color.z, 0.0f, 1.0f)
+	);
+
+	return glm::vec4(color, 1.0f);
+}
+
+void setTexturePixels(GLubyte* pixels, const Scene& scene, BasicCamera& camera)
 {
 	for (int i = 0; i < window_height; i++)
 	{
@@ -76,13 +169,14 @@ void setTexturePixels(GLubyte* pixels)
 			// Convert i,j (our x and y coords) to range -1 -> 1 (clip coords!)
 			float x = ((float)i / (window_width / 2)) - 1;
 			float y = ((float)j / (window_height / 2)) - 1;
-
-			Ray ray;
-			// ray origin is the cameras position
-			ray.Origin = camera.position;
-			ray.Direction = camera.GetRayDirection(x, y); // this is extremely costly
-
-			glm::vec4 color = TraceRay(ray);
+	
+			glm::vec4 color(0.0f);
+			int samples = 1;
+			for (int i = 0; i < samples; i++)
+			{
+				color += PerPixel(scene, camera, x, y);
+			}
+			color /= samples;
 
 			// Each pixel has RGBA values
 			int index = (j + i * window_width) * 4;
@@ -160,16 +254,62 @@ int main()
 	VBO1.Unbind();
 	EBO1.Unbind();
 
+	// create a scene
+	Scene scene;
+
+	// create spheres and materials
+	Sphere sphere1;
+	sphere1.MaterialIndex = 0;
+	Material mat1;
+	mat1.Albedo = { 1.0f, 0.0f, 1.0f };
+
+	// "floor"
+	Sphere sphere2;
+	sphere2.Position = { -10.0f, 0.0f, 0.0f };
+	sphere2.Radius = 9.0f;
+	sphere2.MaterialIndex = 1;
+	Material mat2;
+	mat2.Albedo = { 0.0f, 0.0f, 1.0f };
+	mat2.Roughness = 0.05f;
+
+	Sphere sphere3;
+	sphere3.Position = { -0.25f, -1.25f, -2.0f };
+	sphere3.MaterialIndex = 2;
+	Material mat3;
+	mat3.Albedo = { 1.0f, 0.0f, 0.0f };
+
+	Sphere sphere4;
+	sphere4.Position = { 1.25f, 1.0f, -1.0f };
+	sphere4.MaterialIndex = 3;
+	Material mat4;
+	mat4.Albedo = { 0.0f, 1.0f, 0.0f };
+
+
+	// add spheres to a scene
+	scene.Spheres.push_back(sphere1);
+	scene.Spheres.push_back(sphere2);
+	scene.Spheres.push_back(sphere3);
+	scene.Spheres.push_back(sphere4);
+	scene.Materials.push_back(mat1);
+	scene.Materials.push_back(mat2);
+	scene.Materials.push_back(mat3);
+	scene.Materials.push_back(mat4);
+
+	// create a camera
+	BasicCamera camera(45.0f, 0.01f, 100.0f, window_width, window_height);
+	camera.SetPosition(glm::vec3(2.0f, 0.0f, 5.0f));
+	camera.LookAt(glm::vec3(0.0f, 0.0f, 0.0f));
+
 	// generate pixel data
 	GLubyte* pixels = new GLubyte[window_width * window_height * 4];
-	setTexturePixels(pixels);
+	setTexturePixels(pixels, scene, camera);
 
 	// create a texture
 	Texture texture(pixels, window_width, window_height, GL_TEXTURE_2D, GL_TEXTURE0, GL_LINEAR, GL_RGBA, GL_UNSIGNED_BYTE);
 	texture.LinkUni(shaderProgram, "sampler", 0);
 
 	// set clear color
-	glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
+	glClearColor(CLEAR_COLOR.r, CLEAR_COLOR.g, CLEAR_COLOR.b, CLEAR_COLOR.a);
 
 	// main while loop
 	while (!glfwWindowShouldClose(window))

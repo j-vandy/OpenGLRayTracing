@@ -30,5 +30,4 @@ private:
 	glm::mat4 CalculateProjection();
 };
 
-
 #endif
