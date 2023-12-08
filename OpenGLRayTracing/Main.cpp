@@ -10,6 +10,7 @@
 #include "VBO.h"
 #include "Texture.h"
 #include "Ray.h"
+#include "BasicCamera.h"
 
 // vertices of a square (vertex pos, vertex uv coords)
 GLfloat vertices[] =
@@ -35,6 +36,7 @@ const glm::vec4 backgroundColor(0.07f, 0.13f, 0.17f, 1.0f);
 const glm::vec4 sphereColor(1.0f, 0.0f, 1.0f, 1.0f);
 const glm::vec3 lightDir(-1.0f, -1.0f, -1.0f);
 const float radius = 0.5f;
+BasicCamera camera(45.0f, 0.01f, 100.0f, window_width, window_height);
 
 // returns color for given ray
 glm::vec4 TraceRay(const Ray& ray)
@@ -77,10 +79,8 @@ void setTexturePixels(GLubyte* pixels)
 
 			Ray ray;
 			// ray origin is the cameras position
-			//ray.Origin = camera.GetPosition();
-			//ray.Direction = camera.GetRayDirection(x, y);
-			ray.Origin = glm::vec3(0.0f, 0.0f, 3.0f);
-			ray.Direction = glm::vec3(x, y, -1.0f);
+			ray.Origin = camera.position;
+			ray.Direction = camera.GetRayDirection(x, y); // this is extremely costly
 
 			glm::vec4 color = TraceRay(ray);
 
