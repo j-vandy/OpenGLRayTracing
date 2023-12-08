@@ -9,6 +9,7 @@
 #include "VAO.h"
 #include "VBO.h"
 #include "Texture.h"
+#include "Ray.h"
 
 // vertices of a square (vertex pos, vertex uv coords)
 GLfloat vertices[] =
@@ -26,12 +27,8 @@ GLuint indices[] =
 };
 
 // window dimensions
-const int WINDOW_WIDTH = 800;
-const int WINDOW_HEIGHT = 800;
-
-// texture dimensions
-const int TEXTURE_WIDTH = 1024;
-const int TEXTURE_HEIGHT = 1024;
+int window_width = 800;
+int window_height = 800;
 
 // scene information
 const glm::vec4 backgroundColor(0.07f, 0.13f, 0.17f, 1.0f);
@@ -39,59 +36,74 @@ const glm::vec4 sphereColor(1.0f, 0.0f, 1.0f, 1.0f);
 const glm::vec3 lightDir(-1.0f, -1.0f, -1.0f);
 const float radius = 0.5f;
 
+// returns color for given ray
+glm::vec4 TraceRay(const Ray& ray)
+{
+	// Terms for quadratic formula
+	float a = glm::dot(ray.Direction, ray.Direction);
+	float b = 2.0f * glm::dot(ray.Origin, ray.Direction);
+	float c = glm::dot(ray.Origin, ray.Origin) - radius * radius;
+
+	// b^2 - 4ac (quadratic formula discriminant)
+	float discriminant = b * b - 4.0f * a * c;
+
+	if (discriminant <= 0.0f)
+		return backgroundColor;
+
+	// (-b +- sqrt(discriminant)) / 2a
+	float farthestT = (-b + glm::sqrt(discriminant)) / (2.0f * a);
+	float closestT = (-b - glm::sqrt(discriminant)) / (2.0f * a);
+
+	glm::vec3 hitPoint = ray.Origin + ray.Direction * closestT;
+	// hitPoint - sphere origin (0,0,0)
+	glm::vec3 normal = glm::normalize(hitPoint);
+
+	glm::vec3 light = glm::normalize(lightDir);
+
+	float d = glm::max(glm::dot(normal, -light), 0.0f);
+
+	return sphereColor * d;
+}
+
 void setTexturePixels(GLubyte* pixels)
 {
-	for (int i = 0; i < TEXTURE_WIDTH; i++)
+	for (int i = 0; i < window_height; i++)
 	{
-		for (int j = 0; j < TEXTURE_HEIGHT; j++)
+		for (int j = 0; j < window_width; j++)
 		{
-			glm::vec4 color;
+			// Convert i,j (our x and y coords) to range -1 -> 1 (clip coords!)
+			float x = ((float)i / (window_width / 2)) - 1;
+			float y = ((float)j / (window_height / 2)) - 1;
 
-			// Convert i,j (our x and y coords) to range -1 -> 1
-			float x = ((float)i / (TEXTURE_WIDTH / 2)) - 1;
-			float y = ((float)j / (TEXTURE_HEIGHT / 2)) - 1;
+			Ray ray;
+			// ray origin is the cameras position
+			//ray.Origin = camera.GetPosition();
+			//ray.Direction = camera.GetRayDirection(x, y);
+			ray.Origin = glm::vec3(0.0f, 0.0f, 3.0f);
+			ray.Direction = glm::vec3(x, y, -1.0f);
 
-			glm::vec3 rayOrigin(0.0f, 0.0f, 1.0f);
-			glm::vec3 rayDirection(x, y, -1.0f);
-			rayDirection = glm::normalize(rayDirection);
-
-			// Terms for quadratic formula
-			float a = glm::dot(rayDirection, rayDirection);
-			float b = 2.0f * glm::dot(rayOrigin, rayDirection);
-			float c = glm::dot(rayOrigin, rayOrigin) - radius * radius;
-
-			// b^2 - 4ac (quadratic formula discriminant)
-			float discriminant = b * b - 4.0f * a * c;
-
-			if (discriminant > 0.0f)
-			{
-				// (-b +- sqrt(discriminant)) / 2a
-				float farthestT = (-b + glm::sqrt(discriminant)) / (2.0f * a);
-				float closestT = (-b - glm::sqrt(discriminant)) / (2.0f * a);
-
-				glm::vec3 hitPoint = rayOrigin + rayDirection * closestT;
-				// hitPoint - sphere origin (0,0,0)
-				glm::vec3 normal = glm::normalize(hitPoint);
-
-				glm::vec3 light = glm::normalize(lightDir);
-				
-				float d = glm::max(glm::dot(normal, -light), 0.0f);
-
-				color = sphereColor * d;
-			}
-			else
-			{
-				color = backgroundColor;
-			}
+			glm::vec4 color = TraceRay(ray);
 
 			// Each pixel has RGBA values
-			int index = (i * TEXTURE_WIDTH + j) * 4;
+			int index = (j + i * window_width) * 4;
 			pixels[index] = static_cast<GLubyte>(color.r * 255.0f);
 			pixels[index + 1] = static_cast<GLubyte>(color.g * 255.0f);
 			pixels[index + 2] = static_cast<GLubyte>(color.b * 255.0f);
 			pixels[index + 3] = static_cast<GLubyte>(color.a * 255.0f);
 		}
 	}
+}
+
+// update viewport on window resize
+void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
+	window_width = width;
+	window_height = height;
+
+	// update camera viewport
+	//camera.HandleViewportResize(width, height);
+
+	// update viewport
+	glViewport(0, 0, width, height);
 }
 
 int main()
@@ -106,7 +118,7 @@ int main()
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// create a GLFW window
-	GLFWwindow* window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "OpenGLRayTracing", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(window_width, window_height, "OpenGLRayTracing", NULL, NULL);
 	if (window == NULL)
 	{
 		std::cout << "Failed to create GLFW window" << std::endl;
@@ -117,13 +129,14 @@ int main()
 	// set window as current context
 	glfwMakeContextCurrent(window);
 
+	// set framebuffer size callback
+	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
 	// load GLAD so it configures to OpenGL
 	gladLoadGL();
 
 	// set viewport of OpenGL in the Window
-	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-
-
+	glViewport(0, 0, window_width, window_height);
 
 	// generates Shader object using shaders default.vert and default.frag
 	Shader shaderProgram("default.vert", "default.frag");
@@ -148,14 +161,12 @@ int main()
 	EBO1.Unbind();
 
 	// generate pixel data
-	GLubyte* pixels = new GLubyte[TEXTURE_WIDTH * TEXTURE_HEIGHT * 4];
+	GLubyte* pixels = new GLubyte[window_width * window_height * 4];
 	setTexturePixels(pixels);
 
 	// create a texture
-	Texture texture(pixels, TEXTURE_WIDTH, TEXTURE_HEIGHT, GL_TEXTURE_2D, GL_TEXTURE0, GL_LINEAR, GL_RGBA, GL_UNSIGNED_BYTE);
+	Texture texture(pixels, window_width, window_height, GL_TEXTURE_2D, GL_TEXTURE0, GL_LINEAR, GL_RGBA, GL_UNSIGNED_BYTE);
 	texture.LinkUni(shaderProgram, "sampler", 0);
-
-
 
 	// set clear color
 	glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
@@ -184,8 +195,6 @@ int main()
 		// takes care of GLFW events
 		glfwPollEvents();
 	}
-
-
 
 	// delete all objects we have created
 	VAO1.Delete();
