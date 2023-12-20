@@ -2,7 +2,7 @@
 #define SCENE_CLASS_H
 
 #include <glm/glm.hpp>
-#include <vector>;
+#include <vector>
 
 struct Material
 {

@@ -4,7 +4,6 @@
 #include <stb/stb_image.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/random.hpp>
-
 #include "EBO.h"
 #include "shaderClass.h"
 #include "VAO.h"
@@ -30,12 +29,11 @@ GLuint indices[] =
 };
 
 // window dimensions
-int window_width = 800;
-int window_height = 800;
+int window_width = 900;
+int window_height = 900;
 
 // scene information
 const glm::vec4 CLEAR_COLOR(0.07f, 0.13f, 0.17f, 1.0f);
-//const glm::vec3 SKY_COLOR(0.07f, 0.13f, 0.17f);
 const glm::vec3 SKY_COLOR(0.6f, 0.7f, 0.9f);
 const glm::vec3 LIGHT_DIR(-1.0f, -1.0f, -1.0f);
 
@@ -62,7 +60,7 @@ HitPayload ClosestHit(const Scene& scene, const Ray& ray, float hitDist, int obj
 
 	const Sphere& closestSphere = scene.Spheres[objectIndex];
 
-	glm::vec3 origin = ray.Origin - closestSphere.Position; //this still translates vertical :D
+	glm::vec3 origin = ray.Origin - closestSphere.Position;
 
 	payload.WorldPosition = origin + ray.Direction * hitDist;
 	payload.WorldNormal= glm::normalize(payload.WorldPosition);
@@ -75,17 +73,17 @@ HitPayload ClosestHit(const Scene& scene, const Ray& ray, float hitDist, int obj
 // returns color for given ray
 HitPayload TraceRay(const Scene& scene, const Ray& ray)
 {
-	// empty scene
 	int closestSphere = -1;
 	float hitDist = FLT_MAX;
 
+	// loop through all spheres in the scene to find closest intersection
 	for (int i = 0; i < scene.Spheres.size(); i++)
 	{
 		const Sphere& sphere = scene.Spheres[i];
 
-		glm::vec3 origin = ray.Origin - sphere.Position; //this still translate vertical
+		glm::vec3 origin = ray.Origin - sphere.Position;
 		
-		// Terms for quadratic formula
+		// terms for quadratic formula
 		float a = glm::dot(ray.Direction, ray.Direction);
 		float b = 2.0f * glm::dot(origin, ray.Direction);
 		float c = glm::dot(origin, origin) - sphere.Radius * sphere.Radius;
@@ -93,6 +91,7 @@ HitPayload TraceRay(const Scene& scene, const Ray& ray)
 		// b^2 - 4ac (quadratic formula discriminant)
 		float discriminant = b * b - 4.0f * a * c;
 
+		// no intersection
 		if (discriminant <= 0.0f)
 			continue;
 
@@ -106,9 +105,11 @@ HitPayload TraceRay(const Scene& scene, const Ray& ray)
 		}
 	}
 
+	// return miss payload on miss
 	if (closestSphere < 0)
 		return Miss(ray);
 
+	// return hit payload on intersection
 	return ClosestHit(scene, ray, hitDist, closestSphere);
 }
 
@@ -126,31 +127,37 @@ glm::vec4 PerPixel(const Scene& scene, BasicCamera& camera, float x, float y)
 	for (int i = 0; i < bounces; i++)
 	{
 		HitPayload payload = TraceRay(scene, ray);
+		// return sky color on ray miss
 		if (payload.ObjectIndex < 0)
 		{
 			color += SKY_COLOR * multiplier;
 			break;
 		}
 
+		// basic lighting for sphere that the ray intersected with
 		glm::vec3 light = glm::normalize(LIGHT_DIR);
 		float lightIntensity = glm::max(glm::dot(payload.WorldNormal, -light), 0.0f);
 
+		// get albedo of sphere that the ray intersected with
 		const Sphere& closestSphere = scene.Spheres[payload.ObjectIndex];
-
 		Material mat = scene.Materials[closestSphere.MaterialIndex];
 		glm::vec3 sphereColor = mat.Albedo;
 		sphereColor *= lightIntensity;
-		
+
+		// add sphere color to pixel
 		color += sphereColor * multiplier;
 
-
+		// reduce intensity of colors picked up with each bounce
 		multiplier *= 0.35f;
 
+		// set ray origin to be sphere intersection point
 		ray.Origin = payload.WorldPosition + payload.WorldNormal * 0.001f;
 		glm::vec3 rand = glm::linearRand(glm::vec3(-0.5f), glm::vec3(0.5f));
+		// set ray direction to be reflection of ray + some random offset
 		ray.Direction = glm::reflect(ray.Direction, payload.WorldNormal + rand * mat.Roughness);
 	}
 
+	// clamp color rgb
 	color = glm::vec3(
 		glm::clamp(color.x, 0.0f, 1.0f),
 		glm::clamp(color.y, 0.0f, 1.0f),
@@ -169,14 +176,16 @@ void setTexturePixels(GLubyte* pixels, const Scene& scene, BasicCamera& camera)
 			// Convert i,j (our x and y coords) to range -1 -> 1 (clip coords!)
 			float x = ((float)i / (window_width / 2)) - 1;
 			float y = ((float)j / (window_height / 2)) - 1;
-	
+
+			// average the color of multiple samples to fake an
+			// accumulation buffer (denoise image)
 			glm::vec4 color(0.0f);
 			int samples = 1;
 			for (int i = 0; i < samples; i++)
 			{
 				color += PerPixel(scene, camera, x, y);
 			}
-			color /= samples;
+			color /= (float) samples;
 
 			// Each pixel has RGBA values
 			int index = (j + i * window_width) * 4;
@@ -192,9 +201,6 @@ void setTexturePixels(GLubyte* pixels, const Scene& scene, BasicCamera& camera)
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 	window_width = width;
 	window_height = height;
-
-	// update camera viewport
-	//camera.HandleViewportResize(width, height);
 
 	// update viewport
 	glViewport(0, 0, width, height);
@@ -283,7 +289,6 @@ int main()
 	sphere4.MaterialIndex = 3;
 	Material mat4;
 	mat4.Albedo = { 0.0f, 1.0f, 0.0f };
-
 
 	// add spheres to a scene
 	scene.Spheres.push_back(sphere1);
