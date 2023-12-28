@@ -13,6 +13,14 @@
 #include "BasicCamera.h"
 #include "Scene.h"
 
+// ray tracer information
+const int BOUNCES = 3;
+const int SAMPLES = 1;
+
+// window dimensions
+int window_width = 900;
+int window_height = 900;
+
 // vertices of a square (vertex pos, vertex uv coords)
 GLfloat vertices[] =
 {
@@ -27,10 +35,6 @@ GLuint indices[] =
 	0, 1, 2, // lower left triangle
 	2, 1, 3, // upper right triangle
 };
-
-// window dimensions
-int window_width = 900;
-int window_height = 900;
 
 // scene information
 const glm::vec4 CLEAR_COLOR(0.07f, 0.13f, 0.17f, 1.0f);
@@ -123,8 +127,7 @@ glm::vec4 PerPixel(const Scene& scene, BasicCamera& camera, float x, float y)
 	glm::vec3 color(0.0f);
 
 	float multiplier = 1.0f;
-	int bounces = 3;
-	for (int i = 0; i < bounces; i++)
+	for (int i = 0; i < BOUNCES; i++)
 	{
 		HitPayload payload = TraceRay(scene, ray);
 		// return sky color on ray miss
@@ -180,12 +183,11 @@ void setTexturePixels(GLubyte* pixels, const Scene& scene, BasicCamera& camera)
 			// average the color of multiple samples to fake an
 			// accumulation buffer (denoise image)
 			glm::vec4 color(0.0f);
-			int samples = 1;
-			for (int i = 0; i < samples; i++)
+			for (int i = 0; i < SAMPLES; i++)
 			{
 				color += PerPixel(scene, camera, x, y);
 			}
-			color /= (float) samples;
+			color /= (float) SAMPLES;
 
 			// Each pixel has RGBA values
 			int index = (j + i * window_width) * 4;
